@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seveso Drempelwaarden Zoeker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full">
+        <h1 class="text-3xl font-bold mb-4 text-center text-gray-800">Seveso Drempelwaarden Zoeker</h1>
+        <p class="text-center text-gray-600 mb-8">
+            Zoek naar drempelwaarden van gevaarlijke stoffen op basis van H-zinnen, procesomstandigheden en hoeveelheid.
+        </p>
+
+        <!-- Input velden -->
+        <div class="space-y-4 mb-6">
+            <div>
+                <label for="substanceName" class="block text-sm font-medium text-gray-700">Naam van de Stof (optioneel)</label>
+                <input type="text" id="substanceName" placeholder="Bijv. Ammoniak" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            <div>
+                <label for="casNumber" class="block text-sm font-medium text-gray-700">CAS-nummer (optioneel)</label>
+                <input type="text" id="casNumber" placeholder="Bijv. 7664-41-7" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            <div>
+                <label for="hPhrases" class="block text-sm font-medium text-gray-700">H-zinnen (optioneel, scheid met komma)</label>
+                <input type="text" id="hPhrases" placeholder="Bijv. H300, H224" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="flashPoint" class="block text-sm font-medium text-gray-700">Vlampunt (°C)</label>
+                    <input type="number" id="flashPoint" placeholder="Bijv. 21" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                </div>
+                <div>
+                    <label for="boilingPoint" class="block text-sm font-medium text-gray-700">Kookpunt (°C)</label>
+                    <input type="number" id="boilingPoint" placeholder="Bijv. 25" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                </div>
+            </div>
+            <div>
+                <label for="processTemperature" class="block text-sm font-medium text-gray-700">Procestemperatuur (°C)</label>
+                <input type="number" id="processTemperature" placeholder="Bijv. 70" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+            <div>
+                <label for="quantity" class="block text-sm font-medium text-gray-700">Hoeveelheid (ton)</label>
+                <input type="number" id="quantity" placeholder="Bijv. 150" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+            </div>
+        </div>
+
+        <!-- Zoekknop -->
+        <div class="flex justify-center">
+            <button id="searchButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                Zoeken
+            </button>
+        </div>
+
+        <!-- Resultatenweergave -->
+        <div id="results" class="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <p id="resultsMessage" class="text-gray-500 text-center">De resultaten worden hier weergegeven.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchButton = document.getElementById('searchButton');
+            const hPhrasesInput = document.getElementById('hPhrases');
+            const flashPointInput = document.getElementById('flashPoint');
+            const boilingPointInput = document.getElementById('boilingPoint');
+            const processTemperatureInput = document.getElementById('processTemperature');
+            const quantityInput = document.getElementById('quantity');
+            const resultsDiv = document.getElementById('results');
+
+            // Hardgecodeerde, gesimuleerde data van de VLAREM regelgeving
+            const sevesoData = [
+                {
+                    source: "Seveso",
+                    rubric: "P5a",
+                    category: "Ontvlambare vloeistoffen",
+                    hPhrases: ["H224", "H225", "H226"],
+                    lowThreshold: 10,
+                    highThreshold: 50,
+                    notes: [
+                        "Ontvlambare vloeistoffen van categorie 1, of",
+                        "Ontvlambare vloeistoffen van categorie 2 of 3 die bij een temperatuur hoger dan hun kookpunt worden gehouden, of",
+                        "Overige vloeistoffen met een vlampunt ≤ 60 °C, die bij een temperatuur hoger dan hun kookpunt worden gehouden."
+                    ]
+                },
+                {
+                    source: "Seveso",
+                    rubric: "P5b",
+                    category: "Ontvlambare vloeistoffen",
+                    hPhrases: ["H225", "H226"],
+                    lowThreshold: 50,
+                    highThreshold: 200,
+                    notes: [
+                        "Ontvlambare vloeistoffen van categorie 2 of 3 waarbij bijzondere procescondities, zoals een hoge druk of een hoge temperatuur, gevaren voor zware ongevallen kunnen doen ontstaan, of",
+                        "Overige vloeistoffen met een vlampunt ≤ 60 °C waarbij bijzondere verwerkingsomstandigheden, zoals een hoge druk of hoge temperatuur, gevaren voor zware ongevallen kunnen geven."
+                    ]
+                },
+                {
+                    source: "Seveso",
+                    rubric: "P5c",
+                    category: "Ontvlambare vloeistoffen",
+                    hPhrases: ["H225", "H226"],
+                    lowThreshold: 5000,
+                    highThreshold: 50000,
+                    notes: [
+                        "Ontvlambare vloeistoffen van categorie 2 of 3 die niet onder P5a en P5b vallen."
+                    ]
+                },
+                {
+                    source: "Seveso",
+                    rubric: "P6a",
+                    category: "Zelfontledende stoffen en mengsels en organische peroxiden",
+                    hPhrases: ["H240", "H241"],
+                    lowThreshold: 10,
+                    highThreshold: 50,
+                    notes: [
+                        "Zelfontledende stoffen en mengsels van type A of B.",
+                        "Organische peroxiden van type A of B."
+                    ]
+                },
+                {
+                    source: "ARIE",
+                    rubric: "H1",
+                    category: "Huidcorrosie",
+                    hPhrases: ["H314"],
+                    lowThreshold: 50,
+                    highThreshold: 200,
+                    notes: ["Huidcorrosie van categorie 1 (subcategorie 1A, 1B en 1C). Dit is uniek voor de ARIE-regelgeving."]
+                },
+                {
+                    source: "ARIE",
+                    rubric: "B1",
+                    category: "Ontvlambare vloeistoffen door procestemperatuur",
+                    hPhrases: [],
+                    lowThreshold: 50,
+                    highThreshold: 200,
+                    notes: ["Dit is een specifieke ARIE-categorie voor stoffen die ontvlambaar worden vanwege een procestemperatuur die hoger is dan het vlampunt. Van toepassing wanneer het vlampunt ≤ 60°C is en de procestemperatuur > het vlampunt."]
+                }
+            ];
+
+            /**
+             * Zoekt alle overeenkomstige categorieën op basis van H-zinnen, procesomstandigheden en hoeveelheid.
+             * @returns {Array<Object>} Een array van gevonden dataobjecten.
+             */
+            function findCategories() {
+                const hPhrasesString = hPhrasesInput.value.trim();
+                const searchPhrases = hPhrasesString.split(',').map(p => p.trim().toUpperCase()).filter(p => p !== '');
+                const flashPoint = flashPointInput.value ? parseFloat(flashPointInput.value) : null;
+                const boilingPoint = boilingPointInput.value ? parseFloat(boilingPointInput.value) : null;
+                const processTemperature = processTemperatureInput.value ? parseFloat(processTemperatureInput.value) : null;
+                const quantity = quantityInput.value ? parseFloat(quantityInput.value) : null;
+                
+                let foundCategories = [];
+                
+                // Zoeken op basis van H-zinnen
+                if (searchPhrases.length > 0) {
+                    for (const item of sevesoData) {
+                        const hasMatch = item.hPhrases.some(sp => searchPhrases.includes(sp));
+                        if (hasMatch) {
+                            foundCategories.push(item);
+                        }
+                    }
+                }
+
+                // Logica voor ontvlambare vloeistoffen op basis van procestemperatuur en vlampunt
+                if (flashPoint !== null && processTemperature !== null) {
+                    const isFlammableByTemp = processTemperature >= flashPoint;
+                    const isFlammableLiquid = flashPoint <= 60;
+
+                    if (isFlammableByTemp && isFlammableLiquid) {
+                        const tempCategory = sevesoData.find(item => item.rubric === "B1");
+                        if (tempCategory) {
+                            foundCategories.push(tempCategory);
+                        }
+                    }
+                }
+                
+                // Unieke resultaten filteren en verrijken met opmerkingen over de hoeveelheid
+                const uniqueResults = [...new Map(foundCategories.map(item => [item.rubric, item])).values()];
+                
+                if (quantity !== null) {
+                    uniqueResults.forEach(result => {
+                        let quantityNote = "";
+                        if (quantity >= result.highThreshold) {
+                            quantityNote = "De ingevoerde hoeveelheid is groter dan de hoge drempelwaarde. Dit valt onder de zwaarste categorie (uitgebreide ARIE/Seveso melding).";
+                        } else if (quantity >= result.lowThreshold) {
+                            quantityNote = "De ingevoerde hoeveelheid is groter dan de lage drempelwaarde. Dit valt onder de basiscategorie (gewone ARIE/Seveso melding).";
+                        } else {
+                            quantityNote = "De ingevoerde hoeveelheid ligt onder beide drempelwaarden.";
+                        }
+                        if (!result.notes) result.notes = [];
+                        result.notes.push(quantityNote);
+                    });
+                }
+                
+                return uniqueResults;
+            }
+
+            /**
+             * Update de UI met de zoekresultaten.
+             * @param {Array<Object>} results - Een array van gevonden dataobjecten.
+             */
+            function displayResults(results) {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+                
+                if (results.length > 0) {
+                    let html = '<h2 class="text-xl font-semibold text-gray-800 mb-4">Gevonden categorieën:</h2>';
+                    
+                    results.forEach(result => {
+                        html += `
+                            <div class="mb-4 p-4 border border-gray-300 rounded-lg bg-white shadow-sm">
+                                <p class="text-gray-700"><strong>Bron:</strong> ${result.source}</p>
+                                <p class="text-gray-700"><strong>Rubriek:</strong> ${result.rubric}</p>
+                                <p class="text-gray-700"><strong>Categorie:</strong> ${result.category}</p>
+                                <p class="text-gray-700"><strong>H-zinnen:</strong> ${result.hPhrases.length > 0 ? result.hPhrases.join(', ') : 'N.v.t.'}</p>
+                                <p class="text-gray-700"><strong>Lage drempelwaarde:</strong> ${result.lowThreshold} ton</p>
+                                <p class="text-gray-700"><strong>Hoge drempelwaarde:</strong> ${result.highThreshold} ton</p>
+                        `;
+                        // Voeg opmerkingen toe indien aanwezig
+                        if (result.notes && result.notes.length > 0) {
+                            html += `
+                                <div class="mt-4 text-sm text-gray-500">
+                                    <p class="font-semibold">Opmerkingen:</p>
+                                    <ul class="list-disc list-inside mt-1 space-y-1">
+                                        ${result.notes.map(note => `<li>${note}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                        html += `</div>`;
+                    });
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<p class="text-gray-500 text-center">Geen overeenkomstige categorie gevonden. Pas de invoer aan.</p>`;
+                }
+            }
+
+            // Voeg een 'click' event listener toe aan de zoekknop
+            searchButton.addEventListener('click', () => {
+                const hPhrases = hPhrasesInput.value.trim();
+                const flashPoint = flashPointInput.value;
+                const processTemperature = processTemperatureInput.value;
+                const quantity = quantityInput.value;
+                
+                if (hPhrases === '' && flashPoint === '' && processTemperature === '' && quantity === '') {
+                    resultsDiv.innerHTML = `<p class="text-red-500 text-center">Voer ten minste één H-zin, vlampunt, procestemperatuur of hoeveelheid in.</p>`;
+                    return;
+                }
+
+                const foundCategories = findCategories();
+                displayResults(foundCategories);
+            });
+        });
+    </script>
+</body>
+</html>
