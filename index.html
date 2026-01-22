@@ -519,4 +519,287 @@
             checkLogicPanel();
             
             // Sync if visible in other view (e.g. search vs tab) - simple way: re-render is too heavy, 
-            // but
+            // but since we separate views, it's fine.
+        };
+
+        const label = document.createElement('label');
+        label.htmlFor = `h_${idx}`;
+        label.style.cursor = "pointer";
+        label.style.width = "100%";
+        label.innerHTML = `<span class="h-code">${h.c}</span> <span class="h-desc">${h.d}</span>`;
+
+        div.appendChild(check);
+        div.appendChild(label);
+        return div;
+    }
+
+    // --- SEARCH FUNCTIONALITY ---
+    function filterHPhrases() {
+        const term = document.getElementById('hSearch').value.toLowerCase().trim();
+        const tabsHeader = document.getElementById('tabsHeader');
+        const tabContent = document.getElementById('tab-content-wrapper');
+        const searchResults = document.getElementById('searchResults');
+
+        if (term.length < 2) {
+            // Restore Tab View
+            tabsHeader.style.display = 'flex';
+            tabContent.style.display = 'block';
+            searchResults.style.display = 'none';
+            
+            // Re-render checked states in tabs in case changed during search
+            document.querySelectorAll('.h-list-container input').forEach(inp => {
+                inp.checked = checkedIndices.has(parseInt(inp.value));
+            });
+            return;
+        }
+
+        // Switch to Search View
+        tabsHeader.style.display = 'none';
+        tabContent.style.display = 'none';
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = '';
+
+        // Filter
+        const matches = hPhrasesDB.map((h, idx) => ({ h, idx }))
+            .filter(item => 
+                item.h.c.toLowerCase().includes(term) || 
+                item.h.d.toLowerCase().includes(term)
+            );
+
+        if (matches.length === 0) {
+            searchResults.innerHTML = '<div style="padding:10px; color:#64748b;">Geen resultaten gevonden.</div>';
+        } else {
+            matches.forEach(match => {
+                // Manually create item to avoid ID conflicts? No, we hid the others. 
+                // Actually, to be safe, let's use a different ID prefix for search items
+                const div = document.createElement('div');
+                div.className = 'h-item';
+                
+                const check = document.createElement('input');
+                check.type = 'checkbox';
+                check.value = match.idx;
+                check.id = `search_h_${match.idx}`;
+                check.checked = checkedIndices.has(match.idx);
+                
+                check.onchange = function() {
+                    if(this.checked) checkedIndices.add(match.idx);
+                    else checkedIndices.delete(match.idx);
+                    checkLogicPanel();
+                };
+
+                const label = document.createElement('label');
+                label.htmlFor = `search_h_${match.idx}`;
+                label.style.cursor = "pointer";
+                label.style.width = "100%";
+                
+                // Highlight logic
+                let desc = match.h.d;
+                // Simple highlight replace (case insensitive)
+                const regex = new RegExp(`(${term})`, 'gi');
+                const highlightedDesc = desc.replace(regex, '<span class="highlight-text">$1</span>');
+                const highlightedCode = match.h.c.replace(regex, '<span class="highlight-text">$1</span>');
+
+                label.innerHTML = `<span class="h-code">${highlightedCode}</span> <span class="h-desc">${highlightedDesc}</span>`;
+
+                div.appendChild(check);
+                div.appendChild(label);
+                searchResults.appendChild(div);
+            });
+        }
+    }
+
+    function handleSubstanceChange() {
+        const val = document.getElementById('substanceSelect').value;
+        const casInput = document.getElementById('casNumber');
+        const hSection = document.getElementById('hPhraseSection');
+        const casHint = document.getElementById('casHint');
+        
+        if (val === "custom") {
+            casInput.value = "";
+            casInput.disabled = false;
+            casInput.placeholder = "Vul CAS nummer in";
+            hSection.style.opacity = "1";
+            hSection.style.pointerEvents = "auto";
+            casHint.textContent = "Vul het CAS nummer in van uw VIB.";
+            uncheckAllHPhrases();
+        } else if (val !== "") {
+            const sub = namedSubstances[val];
+            casInput.value = sub.cas;
+            casInput.disabled = true;
+            hSection.style.opacity = "0.5";
+            hSection.style.pointerEvents = "none";
+            casHint.textContent = "Vastgesteld CAS nummer voor deze stof.";
+            document.getElementById('logicPanel').style.display = 'none';
+            uncheckAllHPhrases();
+        } else {
+            casInput.value = "";
+            casInput.disabled = true;
+            hSection.style.opacity = "0.5";
+            hSection.style.pointerEvents = "none";
+            casHint.textContent = "Wordt automatisch gevuld bij keuze uit lijst.";
+            document.getElementById('logicPanel').style.display = 'none';
+            uncheckAllHPhrases();
+        }
+    }
+
+    function uncheckAllHPhrases() {
+        checkedIndices.clear();
+        document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        checkLogicPanel();
+    }
+
+    function switchTab(tabName, event) {
+        document.querySelectorAll('.h-list-container').forEach(el => el.style.display = 'none');
+        document.getElementById(`list-${tabName}`).style.display = 'block';
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Sync checkboxes when switching tabs (just in case)
+        document.querySelectorAll(`#list-${tabName} input`).forEach(inp => {
+            inp.checked = checkedIndices.has(parseInt(inp.value));
+        });
+    }
+
+    function checkLogicPanel() {
+        // Iterate over SET of indices instead of DOM
+        const selectedObjs = Array.from(checkedIndices).map(i => hPhrasesDB[i]);
+
+        const hasTox = selectedObjs.some(h => h.trigger === 'tox');
+        const hasFlam = selectedObjs.some(h => h.trigger === 'flam');
+
+        const panel = document.getElementById('logicPanel');
+        const divTox = document.getElementById('logic-tox');
+        const divFlam = document.getElementById('logic-flam');
+
+        if (hasTox || hasFlam) {
+            panel.style.display = 'block';
+            divTox.style.display = hasTox ? 'block' : 'none';
+            divFlam.style.display = hasFlam ? 'block' : 'none';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    function calculate() {
+        const subIndex = document.getElementById('substanceSelect').value;
+        const qMax = parseFloat(document.getElementById('qMax').value);
+        const qWork = parseFloat(document.getElementById('qWork').value);
+        const chemName = document.getElementById('chemName').value || "Naamloze stof";
+
+        if (isNaN(qMax) && isNaN(qWork)) {
+            alert("Vul tenminste één hoeveelheid in (Maximaal of Werkvoorraad).");
+            return;
+        }
+
+        let results = [];
+        let usedMethod = "";
+
+        if (subIndex !== "" && subIndex !== "custom") {
+            const sub = namedSubstances[subIndex];
+            results.push({
+                name: sub.name + " (Bijlage 2)",
+                low: sub.low,
+                high: sub.high,
+                arie: sub.arie
+            });
+            usedMethod = "Bijlage 2 (Specifieke Stofnaam)";
+        } 
+        else if (subIndex === "custom") {
+            usedMethod = "Bijlage 1 (H-zin Categorieën)";
+            // Use CHECKED INDICES Set
+            const selectedObjs = Array.from(checkedIndices).map(i => hPhrasesDB[i]);
+            const toxCat = document.getElementById('toxCat').value;
+            const flamCond = document.getElementById('flamCond').value;
+
+            if(checkedIndices.size === 0) {
+                 alert("Selecteer tenminste één H-zin voor handmatige invoer.");
+                 return;
+            }
+
+            let hitCategories = new Set();
+            selectedObjs.forEach(h => {
+                if (h.map) hitCategories.add(h.map);
+                if (h.trigger === "tox") {
+                    if (toxCat === "1") hitCategories.add("H1");
+                    if (toxCat === "2") hitCategories.add("H2");
+                }
+                if (h.trigger === "flam") {
+                    if (flamCond === "high") hitCategories.add("P5a");
+                    else hitCategories.add("P5c");
+                }
+            });
+
+            hitCategories.forEach(catCode => {
+                if (categoryThresholds[catCode]) {
+                    const t = categoryThresholds[catCode];
+                    results.push({
+                        name: `Rubriek ${catCode}`,
+                        low: t.low,
+                        high: t.high,
+                        arie: t.arie
+                    });
+                }
+            });
+        } else {
+             alert("Selecteer eerst een stof of kies voor handmatige invoer.");
+             return;
+        }
+
+        renderResults(results, qMax || 0, qWork || 0, usedMethod, chemName);
+    }
+
+    function renderResults(results, qMax, qWork, method, substanceName) {
+        const tbody = document.getElementById('resultBody');
+        tbody.innerHTML = "";
+        
+        if (results.length === 0) {
+            document.getElementById('summary').innerHTML = `<p style='color:var(--highlight); font-weight:bold;'>✅ Geen Seveso/ARIE categorieën gevonden voor '${substanceName}' op basis van deze input.</p>`;
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        results.forEach(res => {
+            const fSeveso = res.high ? (qMax / res.high).toFixed(3) : "-";
+            const fArie = res.arie ? (qWork / res.arie).toFixed(3) : "-";
+
+            let status = "";
+            if (res.high && qMax >= res.high) status += "<span class='badge bg-high'>Seveso Hoog</span><br>";
+            else if (res.low && qMax >= res.low) status += "<span class='badge bg-low'>Seveso Laag</span><br>";
+            
+            if (res.arie && qWork >= res.arie) status += "<span class='badge bg-arie'>ARIE Plicht</span>";
+
+            if (status === "") status = "<span style='color:#94a3b8; font-size:0.85rem; font-style:italic;'>Onder drempels (telt mee voor sommatie)</span>";
+
+            let row = `<tr>
+                <td><strong>${res.name}</strong></td>
+                <td>
+                    <div style="display:grid; grid-template-columns: 60px 1fr; gap:5px; font-size:0.9rem;">
+                        <span>Sev L:</span> <strong>${res.low || '-'}</strong>
+                        <span>Sev H:</span> <strong>${res.high || '-'}</strong>
+                        <span style="color:var(--highlight);">ARIE:</span> <strong style="color:var(--highlight);">${res.arie || '-'}</strong>
+                    </div>
+                </td>
+                <td>
+                    <div>Max: <strong>${qMax > 0 ? qMax : '-'}</strong></div>
+                    <div style="color:var(--highlight);">Werk: <strong>${qWork > 0 ? qWork : '-'}</strong></div>
+                </td>
+                <td>
+                    <div>S: <strong>${fSeveso}</strong></div>
+                    <div style="color:var(--highlight);">A: <strong>${fArie}</strong></div>
+                </td>
+                <td>${status}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+
+        document.getElementById('summary').innerHTML = `Resultaten voor <strong>'${substanceName}'</strong><br><span style="font-size:0.9rem; color:#64748b;">(Grondslag: ${method})</span>`;
+        document.getElementById('resultArea').style.display = 'block';
+        document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    init();
+</script>
+
+</body>
+</html>
