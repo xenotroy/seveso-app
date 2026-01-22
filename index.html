@@ -3,265 +3,520 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seveso Drempelwaarden Zoeker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Seveso III & ARIE Calculator - Expert Tool</title>
     <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #2563eb;
+            --highlight: #009B4D; 
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #374151;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--primary);
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        /* --- HEADER (Clean, no logo) --- */
+        header {
+            background: white;
+            padding: 30px;
+            border-bottom: 4px solid var(--highlight);
+            text-align: center;
+        }
+
+        #mainTitle { 
+            margin: 0; 
+            font-size: 2rem; 
+            color: var(--primary);
+            font-weight: 800;
+            cursor: help; 
+            user-select: none;
+            letter-spacing: -0.5px;
+        }
+        
+        .sub-title {
+            margin: 10px 0 0 0;
+            font-size: 1rem;
+            color: #64748b;
+        }
+
+        .content { padding: 30px; }
+
+        h2 { font-size: 1.2rem; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-top: 30px; color: var(--secondary); font-weight: 600; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .full-width { grid-column: span 2; }
+
+        label { display: block; font-weight: 700; margin-bottom: 8px; color: var(--secondary); font-size: 0.95rem;}
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        
+        .hint { font-size: 0.85rem; color: #64748b; margin-top: 6px; }
+
+        /* --- H-PHRASE SECTION & SEARCH --- */
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .search-wrapper input {
+            padding-left: 35px;
+            background-color: #f1f5f9;
+            border: none;
+        }
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            color: #94a3b8;
+        }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f8fafc;
+            border: 1px solid transparent;
+            border-bottom: none;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.2s;
+            margin-right: 2px;
+            border-radius: 6px 6px 0 0;
+        }
+        .tab:hover { background: #e2e8f0; color: var(--secondary); }
+        .tab.active {
+            background: white;
+            border: 1px solid var(--border);
+            border-bottom: 2px solid white; /* Overlap border */
+            color: var(--accent);
+            margin-bottom: -1px;
+            z-index: 10;
+        }
+        
+        .h-list-container {
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            padding: 5px;
+            background: #fff;
+            border-radius: 0 0 6px 6px; /* Rounded bottom */
+        }
+
+        /* Search Results styling (same as list but full height) */
+        #searchResults {
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            padding: 5px;
+            background: #fff;
+            border-radius: 6px;
+            display: none; /* Hidden by default */
+        }
+        
+        .h-item {
+            display: flex;
+            align-items: start;
+            padding: 8px 10px;
+            border-bottom: 1px solid #f1f5f9;
+            border-radius: 4px;
+        }
+        .h-item:hover { background-color: #f1f9ff; }
+        .h-item input { width: auto; margin-right: 12px; margin-top: 4px; transform: scale(1.2); cursor: pointer; }
+        .h-code { font-weight: 800; min-width: 65px; color: var(--secondary); }
+        .h-desc { font-size: 0.95rem; color: #334155; cursor: pointer; width: 100%;}
+        
+        /* Highlight matched text */
+        .highlight-text { background-color: #fef08a; }
+
+        /* --- LOGIC PANELS --- */
+        .logic-panel {
+            background-color: #fff7ed;
+            border-left: 5px solid #f97316;
+            padding: 20px;
+            margin-top: 25px;
+            display: none;
+            border-radius: 4px;
+        }
+
+        .btn-calc {
+            background-color: var(--highlight);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 18px;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 30px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .btn-calc:hover { background-color: #007a3d; box-shadow: 0 4px 12px rgba(0,155,77,0.2); }
+
+        /* --- TABLE --- */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; font-size: 0.95rem; }
+        th, td { border-bottom: 1px solid var(--border); padding: 12px 15px; text-align: left; vertical-align: top; }
+        th { background-color: #f8fafc; font-weight: 700; color: var(--secondary); border-top: 1px solid var(--border); }
+        th:first-child { border-top-left-radius: 8px; border-left: 1px solid var(--border); }
+        th:last-child { border-top-right-radius: 8px; border-right: 1px solid var(--border); }
+        td:first-child { border-left: 1px solid var(--border); }
+        td:last-child { border-right: 1px solid var(--border); }
+        
+        .badge {
+            padding: 4px 10px; border-radius: 20px; color: white; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; display: inline-block; margin-bottom: 4px;
+        }
+        .bg-ok { background-color: #10b981; color: white; }
+        .bg-low { background-color: #f59e0b; }
+        .bg-high { background-color: #dc2626; }
+        .bg-arie { background-color: var(--highlight); }
+
+        #resultArea { display: none; margin-top: 40px; border-top: 2px solid var(--border); padding-top: 30px; }
+
+        footer {
+            background: #f8fafc;
+            padding: 25px 30px;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            text-align: center;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full">
-        <h1 class="text-3xl font-bold mb-4 text-center text-gray-800">Seveso Drempelwaarden Zoeker</h1>
-        <p class="text-center text-gray-600 mb-8">
-            Zoek naar drempelwaarden van gevaarlijke stoffen op basis van H-zinnen, procesomstandigheden en hoeveelheid.
-        </p>
+<body>
 
-        <!-- Input velden -->
-        <div class="space-y-4 mb-6">
-            <div>
-                <label for="substanceName" class="block text-sm font-medium text-gray-700">Naam van de Stof (optioneel)</label>
-                <input type="text" id="substanceName" placeholder="Bijv. Ammoniak" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+<div class="container">
+    <header>
+        <h1 id="mainTitle">Seveso III / ARIE Calculator</h1>
+        <p class="sub-title">Toetsing drempelwaarden Wetgeving Gevaarlijke Stoffen</p>
+    </header>
+
+    <div class="content">
+        
+        <h2>1. Identificatie Stof & Hoeveelheid</h2>
+        <div class="grid">
+            <div class="full-width">
+                <label>Selecteer Stof (Bijlage 2 - Naamstoffen)</label>
+                <select id="substanceSelect" onchange="handleSubstanceChange()">
+                    <option value="">-- Zoek uw stof in de lijst --</option>
+                    <option value="custom" style="font-weight:bold; color:var(--accent);">➔ NIET IN LIJST (Handmatige invoer via H-zinnen)</option>
+                </select>
+                <div class="hint">Staat uw stof hierbij? Dan zijn de drempelwaarden wettelijk vastgelegd op naam.</div>
             </div>
+
             <div>
-                <label for="casNumber" class="block text-sm font-medium text-gray-700">CAS-nummer (optioneel)</label>
-                <input type="text" id="casNumber" placeholder="Bijv. 7664-41-7" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                <label>Stofnaam (Eigen Referentie)</label>
+                <input type="text" id="chemName" placeholder="Bijv. 'Tank 4 inhoud'">
             </div>
+            
             <div>
-                <label for="hPhrases" class="block text-sm font-medium text-gray-700">H-zinnen (optioneel, scheid met komma)</label>
-                <input type="text" id="hPhrases" placeholder="Bijv. H300, H224" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="flashPoint" class="block text-sm font-medium text-gray-700">Vlampunt (°C)</label>
-                    <input type="number" id="flashPoint" placeholder="Bijv. 21" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
-                </div>
-                <div>
-                    <label for="boilingPoint" class="block text-sm font-medium text-gray-700">Kookpunt (°C)</label>
-                    <input type="number" id="boilingPoint" placeholder="Bijv. 25" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
-                </div>
-            </div>
-            <div>
-                <label for="processTemperature" class="block text-sm font-medium text-gray-700">Procestemperatuur (°C)</label>
-                <input type="number" id="processTemperature" placeholder="Bijv. 70" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
-            </div>
-            <div>
-                <label for="quantity" class="block text-sm font-medium text-gray-700">Hoeveelheid (ton)</label>
-                <input type="number" id="quantity" placeholder="Bijv. 150" class="mt-1 block w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                <label>CAS Nummer</label>
+                <input type="text" id="casNumber" placeholder="xxx-xx-x" disabled>
+                <div id="casHint" class="hint">Wordt automatisch gevuld bij keuze uit lijst.</div>
             </div>
         </div>
 
-        <!-- Zoekknop -->
-        <div class="flex justify-center">
-            <button id="searchButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
-                Zoeken
-            </button>
+        <div class="grid" style="margin-top: 25px; padding-top: 25px; border-top: 1px dashed var(--border);">
+            <div>
+                <label style="color: var(--highlight);">Toetsing Seveso III</label>
+                <input type="number" id="qMax" step="0.001" placeholder="Vul in: Vergunde / Maximale hoeveelheid (Ton)">
+                <div class="hint">De maximale hoeveelheid die aanwezig mag zijn.</div>
+            </div>
+            <div>
+                <label style="color: var(--highlight);">Toetsing ARIE</label>
+                <input type="number" id="qWork" step="0.001" placeholder="Vul in: Werkvoorraad (Ton)">
+                <div class="hint">De hoeveelheid die dagelijks aanwezig pleegt te zijn.</div>
+            </div>
         </div>
 
-        <!-- Resultatenweergave -->
-        <div id="results" class="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <p id="resultsMessage" class="text-gray-500 text-center">De resultaten worden hier weergegeven.</p>
+        <div id="hPhraseSection" style="opacity: 0.5; pointer-events: none; transition: opacity 0.3s; margin-top:30px;">
+            <h2>2. Gevarenaanduidingen (H-Zinnen)</h2>
+            <p style="margin-bottom:15px; font-style: italic; color: #64748b;">Selecteer H-zinnen indien de stof niet op naam in Bijlage 2 staat.</p>
+
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="hSearch" placeholder="Zoek op H-code (bv. H300) of trefwoord..." oninput="filterHPhrases()">
+            </div>
+
+            <div class="tabs" id="tabsHeader">
+                <div class="tab active" onclick="switchTab('phys', event)">Fysisch</div>
+                <div class="tab" onclick="switchTab('health', event)">Gezondheid</div>
+                <div class="tab" onclick="switchTab('env', event)">Milieu</div>
+                <div class="tab" onclick="switchTab('euh', event)">EUH / Overig</div>
+            </div>
+
+            <div id="tab-content-wrapper">
+                <div id="list-phys" class="h-list-container"></div>
+                <div id="list-health" class="h-list-container" style="display:none;"></div>
+                <div id="list-env" class="h-list-container" style="display:none;"></div>
+                <div id="list-euh" class="h-list-container" style="display:none;"></div>
+            </div>
+
+            <div id="searchResults"></div>
+
         </div>
+
+        <div id="logicPanel" class="logic-panel">
+            <strong style="font-size:1.1rem; display:block; margin-bottom:10px;">⚠️ Aanvullende procesinformatie vereist</strong>
+            <p>Op basis van de geselecteerde H-zinnen is een nadere specificatie nodig.</p>
+            
+            <div id="logic-tox" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid #fed7aa;">
+                <label>Acute Toxiciteit (H300/H310/H330): Bepaal de CLP Categorie</label>
+                <select id="toxCat">
+                    <option value="1">Categorie 1 (Seveso H1 - Zeer streng)</option>
+                    <option value="2">Categorie 2 (Seveso H2 - Streng)</option>
+                    <option value="3">Categorie 3 (Buiten Seveso H1/H2, tenzij inhalatie)</option>
+                </select>
+            </div>
+
+            <div id="logic-flam" style="display:none; margin-top:20px; padding-top:20px; border-top:1px solid #fed7aa;">
+                <label>Ontvlambare Vloeistoffen: Procescondities</label>
+                <select id="flamCond">
+                    <option value="normal">Standaard opslag (Beneden vlampunt) -> P5c</option>
+                    <option value="high">Procescondities met hoge T of P -> P5a (Strenger)</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn-calc" onclick="calculate()">Bereken Classificatie</button>
+
+        <div id="resultArea">
+            <h2 style="border-color: var(--highlight); color: var(--highlight);">Resultaat Analyse</h2>
+            <div id="summary" style="font-size:1.1rem; margin-bottom:20px;"></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="25%">Rubriek / Grondslag</th>
+                        <th width="20%">Drempels (Ton)</th>
+                        <th width="20%">Ingevoerde Hoeveelheid</th>
+                        <th width="15%">Fractie (Q/D)</th>
+                        <th width="20%">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+            <p style="margin-top:15px; font-size:0.9rem; color:#64748b;">
+                <em>Let op: Indien er geen directe drempeloverschrijding is, dient u de sommatieregel toe te passen.</em>
+            </p>
+        </div>
+
     </div>
+    
+    <footer>
+        <p><strong>Disclaimer:</strong> Apply Opleidingen en Advies streeft ernaar om op deze website correcte en actuele informatie te verschaffen. Het kan echter voorkomen dat de informatie op de website onvolledig of onjuist is. Apply Opleidingen en Advies aanvaardt geen enkele aansprakelijkheid voor schade- en/of kosten die voortvloeien uit onvolledige en/of foutieve informatie.</p>
+        <p>Verwijzingen, hyperlinks en dergelijke in de website leiden meestal naar andere sites of andere gegevensbronnen die door derden worden aangeboden en bijgehouden. Apply Opleidingen en Advies heeft geen enkele bemoeienis met de vorm en de inhoud van die informatiebronnen en aanvaardt daarvoor geen enkele aansprakelijkheid.</p>
+    </footer>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchButton = document.getElementById('searchButton');
-            const hPhrasesInput = document.getElementById('hPhrases');
-            const flashPointInput = document.getElementById('flashPoint');
-            const boilingPointInput = document.getElementById('boilingPoint');
-            const processTemperatureInput = document.getElementById('processTemperature');
-            const quantityInput = document.getElementById('quantity');
-            const resultsDiv = document.getElementById('results');
+<script>
+    // --- EASTER EGG (Kevin Troy) ---
+    let titleClicks = 0;
+    let titleTimer;
+    document.getElementById('mainTitle').addEventListener('click', function() {
+        titleClicks++;
+        clearTimeout(titleTimer);
+        if (titleClicks === 5) {
+            alert("🔒 HVK KENNIS ONTGRENDELD 🔒\n\nHier spreekt Kevin Troy, hoofddocent HVK:\n\n\"Leuk dat je zo snel klikt, maar onthoud: in de veiligheidskunde is snelheid zelden de juiste bocht. Beoordeel je risico's zorgvuldig, niet haastig. En vergeet die sommatieregel niet!\"");
+            titleClicks = 0; 
+        } else {
+            titleTimer = setTimeout(() => { titleClicks = 0; }, 1000);
+        }
+    });
 
-            // Hardgecodeerde, gesimuleerde data van de VLAREM regelgeving
-            const sevesoData = [
-                {
-                    source: "Seveso",
-                    rubric: "P5a",
-                    category: "Ontvlambare vloeistoffen",
-                    hPhrases: ["H224", "H225", "H226"],
-                    lowThreshold: 10,
-                    highThreshold: 50,
-                    notes: [
-                        "Ontvlambare vloeistoffen van categorie 1, of",
-                        "Ontvlambare vloeistoffen van categorie 2 of 3 die bij een temperatuur hoger dan hun kookpunt worden gehouden, of",
-                        "Overige vloeistoffen met een vlampunt ≤ 60 °C, die bij een temperatuur hoger dan hun kookpunt worden gehouden."
-                    ]
-                },
-                {
-                    source: "Seveso",
-                    rubric: "P5b",
-                    category: "Ontvlambare vloeistoffen",
-                    hPhrases: ["H225", "H226"],
-                    lowThreshold: 50,
-                    highThreshold: 200,
-                    notes: [
-                        "Ontvlambare vloeistoffen van categorie 2 of 3 waarbij bijzondere procescondities, zoals een hoge druk of een hoge temperatuur, gevaren voor zware ongevallen kunnen doen ontstaan, of",
-                        "Overige vloeistoffen met een vlampunt ≤ 60 °C waarbij bijzondere verwerkingsomstandigheden, zoals een hoge druk of hoge temperatuur, gevaren voor zware ongevallen kunnen geven."
-                    ]
-                },
-                {
-                    source: "Seveso",
-                    rubric: "P5c",
-                    category: "Ontvlambare vloeistoffen",
-                    hPhrases: ["H225", "H226"],
-                    lowThreshold: 5000,
-                    highThreshold: 50000,
-                    notes: [
-                        "Ontvlambare vloeistoffen van categorie 2 of 3 die niet onder P5a en P5b vallen."
-                    ]
-                },
-                {
-                    source: "Seveso",
-                    rubric: "P6a",
-                    category: "Zelfontledende stoffen en mengsels en organische peroxiden",
-                    hPhrases: ["H240", "H241"],
-                    lowThreshold: 10,
-                    highThreshold: 50,
-                    notes: [
-                        "Zelfontledende stoffen en mengsels van type A of B.",
-                        "Organische peroxiden van type A of B."
-                    ]
-                },
-                {
-                    source: "ARIE",
-                    rubric: "H1",
-                    category: "Huidcorrosie",
-                    hPhrases: ["H314"],
-                    lowThreshold: 50,
-                    highThreshold: 200,
-                    notes: ["Huidcorrosie van categorie 1 (subcategorie 1A, 1B en 1C). Dit is uniek voor de ARIE-regelgeving."]
-                },
-                {
-                    source: "ARIE",
-                    rubric: "B1",
-                    category: "Ontvlambare vloeistoffen door procestemperatuur",
-                    hPhrases: [],
-                    lowThreshold: 50,
-                    highThreshold: 200,
-                    notes: ["Dit is een specifieke ARIE-categorie voor stoffen die ontvlambaar worden vanwege een procestemperatuur die hoger is dan het vlampunt. Van toepassing wanneer het vlampunt ≤ 60°C is en de procestemperatuur > het vlampunt."]
-                }
-            ];
+    // --- DATA: BIJLAGE 2 VOLLEDIGE LIJST ---
+    const namedSubstances = [
+        { name: "1. Ammoniumnitraat (meststoffen)", cas: "-", low: 5000, high: 10000, arie: null },
+        { name: "2. Ammoniumnitraat (technisch, conc > 80%)", cas: "-", low: 1250, high: 5000, arie: null },
+        { name: "3. Ammoniumnitraat (off-spec/explosief)", cas: "-", low: 350, high: 2500, arie: null },
+        { name: "4. Ammoniumnitraat (lage conc)", cas: "-", low: 10, high: 50, arie: null },
+        { name: "5. Kaliumnitraat (comp. kristal)", cas: "-", low: 5000, high: 10000, arie: null },
+        { name: "6. Kaliumnitraat (comp. prills)", cas: "-", low: 1250, high: 5000, arie: null },
+        { name: "7. Diarseenpentoxide, arseen(V)zuur", cas: "1303-28-2", low: 1, high: 2, arie: null },
+        { name: "8. Diarseentrioxide, arseen(III)zuur", cas: "1327-53-3", low: null, high: 0.1, arie: null },
+        { name: "9. Broom", cas: "7726-95-6", low: 20, high: 100, arie: null },
+        { name: "10. Chloor", cas: "7782-50-5", low: 10, high: 25, arie: null },
+        { name: "11. Inhaleerbare poedervormige nikkelverbindingen", cas: "-", low: null, high: 1, arie: null },
+        { name: "12. Ethyleenimine", cas: "151-56-4", low: 10, high: 20, arie: null },
+        { name: "13. Fluor", cas: "7782-41-4", low: 10, high: 20, arie: null },
+        { name: "14. Formaldehyde (conc >= 90%)", cas: "50-00-0", low: 5, high: 50, arie: null },
+        { name: "15. Waterstof", cas: "1333-74-0", low: 5, high: 50, arie: null },
+        { name: "16. Chloorwaterstof (vloeibaar gas)", cas: "7647-01-0", low: 25, high: 250, arie: null },
+        { name: "17. Loodalkylen", cas: "-", low: 5, high: 50, arie: null },
+        { name: "18. Ontvlambare vloeibare gassen (LPG/Aardgas)", cas: "-", low: 50, high: 200, arie: null },
+        { name: "19. Acetyleen", cas: "74-86-2", low: 5, high: 50, arie: null },
+        { name: "20. Ethyleenoxide", cas: "75-21-8", low: 5, high: 50, arie: null },
+        { name: "21. Propyleenoxide", cas: "75-56-9", low: 5, high: 50, arie: null },
+        { name: "22. Methanol", cas: "67-56-1", low: 500, high: 5000, arie: null },
+        { name: "23. 4,4'-Methyleen bis(2-chlooraniline)", cas: "101-14-4", low: null, high: 0.01, arie: null },
+        { name: "24. Methylisocyanaat", cas: "624-83-9", low: null, high: 0.15, arie: null },
+        { name: "25. Zuurstof", cas: "7782-44-7", low: 200, high: 2000, arie: null },
+        { name: "26. 2,4-Tolueendiisocyanaat", cas: "584-84-9", low: 10, high: 100, arie: null },
+        { name: "27. Carbonylchloride (fosgeen)", cas: "75-44-5", low: 0.3, high: 0.75, arie: null },
+        { name: "28. Arsine (arseentrihydride)", cas: "7784-42-1", low: 0.2, high: 1, arie: null },
+        { name: "29. Fosfine (fosfortrihydride)", cas: "7803-51-2", low: 0.2, high: 1, arie: null },
+        { name: "30. Zwaveldichloride", cas: "10545-99-0", low: null, high: 1, arie: null },
+        { name: "31. Zwaveltrioxide", cas: "7446-11-9", low: 15, high: 75, arie: null },
+        { name: "32. Polychloordibenzofuranen / -dioxinen", cas: "-", low: null, high: 0.001, arie: null },
+        { name: "33. Carcinogenen (specifiek, conc > 5%)", cas: "-", low: 0.5, high: 2, arie: null },
+        { name: "34. Aardolieproducten (Benzine/Diesel/Kerosine)", cas: "-", low: 2500, high: 25000, arie: null },
+        { name: "35. Watervrije ammoniak", cas: "7664-41-7", low: 50, high: 200, arie: null },
+        { name: "36. Boortrifluoride", cas: "7637-07-2", low: 5, high: 20, arie: null },
+        { name: "37. Waterstofsulfide", cas: "7783-06-4", low: 5, high: 20, arie: null },
+        { name: "38. Piperidine", cas: "110-89-4", low: 50, high: 200, arie: null },
+        { name: "39. Bis(2-dimethylaminoethyl) (methyl)amine", cas: "3030-47-5", low: 50, high: 200, arie: null },
+        { name: "40. 3-(2-Ethylhexyloxy)propylamine", cas: "5397-31-9", low: 50, high: 200, arie: null },
+        { name: "41. Mengsels natriumhypochloriet (Acute 1 < 5%)", cas: "-", low: 200, high: 500, arie: null },
+        { name: "42. Propylamine", cas: "107-10-8", low: 500, high: 2000, arie: null },
+        { name: "43. Tert-butylacrylaat", cas: "1663-39-4", low: 200, high: 500, arie: null },
+        { name: "44. 2-Methyl-3-buteennitrile", cas: "16529-56-9", low: 500, high: 2000, arie: null },
+        { name: "45. Tetrahydro-3,5-dimethyl-1,3,5-thiadiazine-2-thion", cas: "533-74-4", low: 100, high: 200, arie: null },
+        { name: "46. Methylacrylaat", cas: "96-33-3", low: 500, high: 2000, arie: null },
+        { name: "47. 3-Methylpyridine", cas: "108-99-6", low: 500, high: 2000, arie: null },
+        { name: "48. 1-Broom-3-chloorpropaan", cas: "109-70-6", low: 500, high: 2000, arie: null }
+    ];
 
-            /**
-             * Zoekt alle overeenkomstige categorieën op basis van H-zinnen, procesomstandigheden en hoeveelheid.
-             * @returns {Array<Object>} Een array van gevonden dataobjecten.
-             */
-            function findCategories() {
-                const hPhrasesString = hPhrasesInput.value.trim();
-                const searchPhrases = hPhrasesString.split(',').map(p => p.trim().toUpperCase()).filter(p => p !== '');
-                const flashPoint = flashPointInput.value ? parseFloat(flashPointInput.value) : null;
-                const boilingPoint = boilingPointInput.value ? parseFloat(boilingPointInput.value) : null;
-                const processTemperature = processTemperatureInput.value ? parseFloat(processTemperatureInput.value) : null;
-                const quantity = quantityInput.value ? parseFloat(quantityInput.value) : null;
-                
-                let foundCategories = [];
-                
-                // Zoeken op basis van H-zinnen
-                if (searchPhrases.length > 0) {
-                    for (const item of sevesoData) {
-                        const hasMatch = item.hPhrases.some(sp => searchPhrases.includes(sp));
-                        if (hasMatch) {
-                            foundCategories.push(item);
-                        }
-                    }
-                }
+    const hPhrasesDB = [
+        { c: "H200", d: "Instabiele ontplofbare stof", t: "phys", map: "P1a" },
+        { c: "H201", d: "Ontplofbare stof: gevaar voor massa-explosie", t: "phys", map: "P1a" },
+        { c: "H202", d: "Ontplofbare stof, ernstig gevaar voor scherfwerking", t: "phys", map: "P1a" },
+        { c: "H203", d: "Ontplofbare stof; gevaar voor brand/luchtdruk", t: "phys", map: "P1a" },
+        { c: "H204", d: "Gevaar voor brand of scherfwerking", t: "phys", map: "P1b" },
+        { c: "H205", d: "Gevaar voor massa-explosie bij brand", t: "phys", map: "P1a" },
+        { c: "H220", d: "Zeer licht ontvlambaar gas", t: "phys", map: "P2" },
+        { c: "H221", d: "Ontvlambaar gas", t: "phys", map: "P2" },
+        { c: "H222", d: "Zeer licht ontvlambare aerosol", t: "phys", map: "P3a" },
+        { c: "H223", d: "Ontvlambare aerosol", t: "phys", map: "P3b" },
+        { c: "H224", d: "Zeer licht ontvlambare vloeistof", t: "phys", trigger: "flam" },
+        { c: "H225", d: "Licht ontvlambare vloeistof", t: "phys", trigger: "flam" },
+        { c: "H226", d: "Ontvlambare vloeistof", t: "phys", trigger: "flam" },
+        { c: "H227", d: "Brandbare vloeistof", t: "phys", map: null },
+        { c: "H228", d: "Ontvlambare vaste stof", t: "phys", map: null },
+        { c: "H240", d: "Ontploffingsgevaar bij verwarming", t: "phys", map: "P1a" },
+        { c: "H241", d: "Brand- of ontploffingsgevaar bij verwarming", t: "phys", map: "P1a" },
+        { c: "H242", d: "Brandgevaar bij verwarming", t: "phys", map: "P6b" },
+        { c: "H250", d: "Vat spontaan vlam aan lucht", t: "phys", map: "P7" },
+        { c: "H260", d: "In contact met water ontvlambare gassen (spontaan)", t: "phys", map: "O2" },
+        { c: "H261", d: "In contact met water ontvlambare gassen", t: "phys", map: "O2" },
+        { c: "H270", d: "Oxiderend gas", t: "phys", map: "P4" },
+        { c: "H271", d: "Kan brand/ontploffing veroorzaken (Oxiderend)", t: "phys", map: "P8" },
+        { c: "H272", d: "Kan brand bevorderen (Oxiderend)", t: "phys", map: "P8" },
+        { c: "H300", d: "Dodelijk bij inslikken", t: "health", trigger: "tox" },
+        { c: "H301", d: "Giftig bij inslikken", t: "health", trigger: "tox" },
+        { c: "H304", d: "Aspiratiegevaar", t: "health", map: null },
+        { c: "H310", d: "Dodelijk bij huidcontact", t: "health", trigger: "tox" },
+        { c: "H311", d: "Giftig bij huidcontact", t: "health", trigger: "tox" },
+        { c: "H314", d: "Huidcorrosie", t: "health", map: null },
+        { c: "H318", d: "Ernstig oogletsel", t: "health", map: null },
+        { c: "H330", d: "Dodelijk bij inademing", t: "health", trigger: "tox" },
+        { c: "H331", d: "Giftig bij inademing", t: "health", trigger: "tox" },
+        { c: "H370", d: "Schade aan organen (STOT SE 1)", t: "health", map: "H3" },
+        { c: "H372", d: "Schade organen bij herhaling (STOT RE 1)", t: "health", map: null },
+        { c: "H300+H310", d: "Dodelijk bij inslikken en huid", t: "health", trigger: "tox" },
+        { c: "H300+H330", d: "Dodelijk bij inslikken en inademing", t: "health", trigger: "tox" },
+        { c: "H301+H311", d: "Giftig bij inslikken en huid", t: "health", trigger: "tox" },
+        { c: "H400", d: "Zeer giftig voor waterleven (Acuut)", t: "env", map: "E1" },
+        { c: "H410", d: "Zeer giftig... langdurig (Chron 1)", t: "env", map: "E1" },
+        { c: "H411", d: "Giftig... langdurig (Chron 2)", t: "env", map: "E2" },
+        { c: "H412", d: "Schadelijk... langdurig", t: "env", map: null },
+        { c: "EUH014", d: "Reageert heftig met water", t: "euh", map: "O1" },
+        { c: "EUH029", d: "Vormt giftig gas met water", t: "euh", map: "O3" },
+        { c: "EUH066", d: "Droge huid", t: "euh", map: null }
+    ];
 
-                // Logica voor ontvlambare vloeistoffen op basis van procestemperatuur en vlampunt
-                if (flashPoint !== null && processTemperature !== null) {
-                    const isFlammableByTemp = processTemperature >= flashPoint;
-                    const isFlammableLiquid = flashPoint <= 60;
+    const categoryThresholds = {
+        "H1": { low: 5, high: 20, arie: 1.5 },
+        "H2": { low: 50, high: 200, arie: 15 },
+        "H3": { low: 50, high: 200, arie: 15 },
+        "P1a": { low: 10, high: 50, arie: 3 },
+        "P1b": { low: 50, high: 200, arie: 15 },
+        "P2": { low: 10, high: 50, arie: 3 },
+        "P3a": { low: 150, high: 500, arie: 45 },
+        "P3b": { low: 5000, high: 50000, arie: 1500 },
+        "P4": { low: 50, high: 200, arie: 15 },
+        "P5a": { low: 10, high: 50, arie: 3 },
+        "P5b": { low: 50, high: 200, arie: 15 },
+        "P5c": { low: 5000, high: 50000, arie: 1500 },
+        "P6b": { low: 50, high: 200, arie: 15 },
+        "P7": { low: 50, high: 200, arie: 15 },
+        "P8": { low: 50, high: 200, arie: 15 },
+        "E1": { low: 100, high: 200, arie: null },
+        "E2": { low: 200, high: 500, arie: null },
+        "O1": { low: 100, high: 500, arie: 30 },
+        "O2": { low: 100, high: 500, arie: 30 },
+        "O3": { low: 50, high: 200, arie: 15 }
+    };
 
-                    if (isFlammableByTemp && isFlammableLiquid) {
-                        const tempCategory = sevesoData.find(item => item.rubric === "B1");
-                        if (tempCategory) {
-                            foundCategories.push(tempCategory);
-                        }
-                    }
-                }
-                
-                // Unieke resultaten filteren en verrijken met opmerkingen over de hoeveelheid
-                const uniqueResults = [...new Map(foundCategories.map(item => [item.rubric, item])).values()];
-                
-                if (quantity !== null) {
-                    uniqueResults.forEach(result => {
-                        let quantityNote = "";
-                        if (quantity >= result.highThreshold) {
-                            quantityNote = "De ingevoerde hoeveelheid is groter dan de hoge drempelwaarde. Dit valt onder de zwaarste categorie (uitgebreide ARIE/Seveso melding).";
-                        } else if (quantity >= result.lowThreshold) {
-                            quantityNote = "De ingevoerde hoeveelheid is groter dan de lage drempelwaarde. Dit valt onder de basiscategorie (gewone ARIE/Seveso melding).";
-                        } else {
-                            quantityNote = "De ingevoerde hoeveelheid ligt onder beide drempelwaarden.";
-                        }
-                        if (!result.notes) result.notes = [];
-                        result.notes.push(quantityNote);
-                    });
-                }
-                
-                return uniqueResults;
-            }
+    // --- LOGIC: INIT & SEARCH ---
 
-            /**
-             * Update de UI met de zoekresultaten.
-             * @param {Array<Object>} results - Een array van gevonden dataobjecten.
-             */
-            function displayResults(results) {
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '';
-                
-                if (results.length > 0) {
-                    let html = '<h2 class="text-xl font-semibold text-gray-800 mb-4">Gevonden categorieën:</h2>';
-                    
-                    results.forEach(result => {
-                        html += `
-                            <div class="mb-4 p-4 border border-gray-300 rounded-lg bg-white shadow-sm">
-                                <p class="text-gray-700"><strong>Bron:</strong> ${result.source}</p>
-                                <p class="text-gray-700"><strong>Rubriek:</strong> ${result.rubric}</p>
-                                <p class="text-gray-700"><strong>Categorie:</strong> ${result.category}</p>
-                                <p class="text-gray-700"><strong>H-zinnen:</strong> ${result.hPhrases.length > 0 ? result.hPhrases.join(', ') : 'N.v.t.'}</p>
-                                <p class="text-gray-700"><strong>Lage drempelwaarde:</strong> ${result.lowThreshold} ton</p>
-                                <p class="text-gray-700"><strong>Hoge drempelwaarde:</strong> ${result.highThreshold} ton</p>
-                        `;
-                        // Voeg opmerkingen toe indien aanwezig
-                        if (result.notes && result.notes.length > 0) {
-                            html += `
-                                <div class="mt-4 text-sm text-gray-500">
-                                    <p class="font-semibold">Opmerkingen:</p>
-                                    <ul class="list-disc list-inside mt-1 space-y-1">
-                                        ${result.notes.map(note => `<li>${note}</li>`).join('')}
-                                    </ul>
-                                </div>
-                            `;
-                        }
-                        html += `</div>`;
-                    });
-                    resultsDiv.innerHTML = html;
-                } else {
-                    resultsDiv.innerHTML = `<p class="text-gray-500 text-center">Geen overeenkomstige categorie gevonden. Pas de invoer aan.</p>`;
-                }
-            }
+    // State object to track checked items (by index in hPhrasesDB)
+    let checkedIndices = new Set();
 
-            // Voeg een 'click' event listener toe aan de zoekknop
-            searchButton.addEventListener('click', () => {
-                const hPhrases = hPhrasesInput.value.trim();
-                const flashPoint = flashPointInput.value;
-                const processTemperature = processTemperatureInput.value;
-                const quantity = quantityInput.value;
-                
-                if (hPhrases === '' && flashPoint === '' && processTemperature === '' && quantity === '') {
-                    resultsDiv.innerHTML = `<p class="text-red-500 text-center">Voer ten minste één H-zin, vlampunt, procestemperatuur of hoeveelheid in.</p>`;
-                    return;
-                }
-
-                const foundCategories = findCategories();
-                displayResults(foundCategories);
-            });
+    function init() {
+        // Populate Substances
+        const sel = document.getElementById('substanceSelect');
+        namedSubstances.forEach((sub, index) => {
+            let opt = document.createElement('option');
+            opt.value = index;
+            opt.text = sub.name;
+            sel.add(opt);
         });
-    </script>
-</body>
-</html>
+
+        // Populate Tabbed Lists (Initial View)
+        renderTabs();
+    }
+
+    function renderTabs() {
+        hPhrasesDB.forEach((h, idx) => {
+            const container = document.getElementById(`list-${h.t}`) || document.getElementById('list-euh');
+            container.appendChild(createCheckboxItem(h, idx));
+        });
+    }
+
+    // Helper to create the UI element
+    function createCheckboxItem(h, idx) {
+        const div = document.createElement('div');
+        div.className = 'h-item';
+        
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.value = idx;
+        check.id = `h_${idx}`; // Unique ID
+        check.checked = checkedIndices.has(idx);
+        
+        // Event Listener: Sync state
+        check.onchange = function() {
+            if(this.checked) checkedIndices.add(idx);
+            else checkedIndices.delete(idx);
+            
+            // Re-check logic panel triggers
+            checkLogicPanel();
+            
+            // Sync if visible in other view (e.g. search vs tab) - simple way: re-render is too heavy, 
+            // but
